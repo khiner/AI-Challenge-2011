@@ -5,6 +5,12 @@
 
 extern const int NUM_AGENTS;
 
+extern const char FOOD;
+extern const char WATER;
+extern const char LAND;
+extern const char DEAD;
+
+
 // this header is basically self-documenting
 
 struct game_info {

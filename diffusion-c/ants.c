@@ -2,6 +2,11 @@
 
 const int NUM_AGENTS = 4;
 
+const char FOOD = '*';
+const char WATER = '%';
+const char LAND = '.';
+const char DEAD = '!';
+
 // clear the diffusion agents at the given tile
 void clearDiffusion(struct tile *tile) {
     int i;
@@ -92,9 +97,9 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
     for (i = 0; i < map_len; ++i) {
         char current = game_info->map[i].state;
 
-        if (current == '?' || current == '.' || current == '%')
+        if (current == '?' || current == LAND || current == WATER)
             continue;
-        else if (current == '*')
+        else if (current == FOOD)
             ++food_count;
         else if (current == 'a')
             ++my_count;
@@ -165,10 +170,10 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
     for (i = 0; i < game_info->rows; ++i) {
         for (j = 0; j < game_info->cols; ++j) {
             char current = game_info->map[game_info->cols*i + j].state;
-            if (current == '?' || current == '.' || current == '%')
+            if (current == '?' || current == LAND || current == WATER)
                 continue;
 
-            if (current == '*') {
+            if (current == FOOD) {
                 --food_count;
 
                 game_state->food[food_count].row = i;
@@ -215,7 +220,7 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
                 game_state->dead_ants[dead_count].col = j;
                 game_state->dead_ants[dead_count].player = (current & (~0x80));
                 
-                game_info->map[game_info->cols*i + j].state = '!';
+                game_info->map[game_info->cols*i + j].state = DEAD;
             } else if (isupper(current)) {
                 --hill_count;
 
@@ -267,7 +272,7 @@ void _init_map(char *data, struct game_info *game_info) {
             struct tile *newTile = malloc(sizeof(struct tile));            
             newTile->row = i/game_info->cols;
             newTile->col = i%game_info->cols;
-            newTile->state = '.';
+            newTile->state = LAND;
             newTile->lastSeen = 0;
             newTile->seen = 0;
             clearDiffusion(newTile);
@@ -276,8 +281,8 @@ void _init_map(char *data, struct game_info *game_info) {
     }
 
     for (i = 0; i < map_len; ++i)
-        if (game_info->map[i].state != '%')
-            game_info->map[i].state = '.';
+        if (game_info->map[i].state != WATER)
+            game_info->map[i].state = LAND;
 
     while (*data != 0) {
         char *tmp_data = data;
@@ -312,7 +317,7 @@ void _init_map(char *data, struct game_info *game_info) {
         switch (*data) {
 
             case 'w':
-                game_info->map[offset].state = '%';
+                game_info->map[offset].state = WATER;
                 break;
             case 'a':
                 if (isdigit(game_info->map[offset].state))
@@ -324,7 +329,7 @@ void _init_map(char *data, struct game_info *game_info) {
                 game_info->map[offset].state = (((unsigned char) (var3 - '0')) + 0x80);
                 break;
             case 'f':
-                game_info->map[offset].state = '*';
+                game_info->map[offset].state = FOOD;
                 break;
             case 'h':
                 game_info->map[offset].state = var3;
