@@ -23,7 +23,8 @@ struct game_info {
 	int attackradius_sq;
 	int spawnradius_sq;
     int seed;
-	struct tile* map;    
+    int **vision_offsets_sq;
+	struct tile* map;
 };
 
 struct tile {

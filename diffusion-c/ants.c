@@ -14,6 +14,46 @@ void clearDiffusion(struct tile *tile) {
         tile->agents[i] = 0;
 }
 
+// precalculate tiles around an ant to set as visible
+//should only be called once, since the vision offsets don't change
+void _init_vision_offsets(struct game_info *game_info) {
+    int mx = (int)(sqrt(game_info->viewradius_sq));
+    fprintf(stderr, "mx = %d\n", mx);
+    fprintf(stderr, "rows = %dcols = %d\n", game_info->rows, game_info->cols);        
+    int count = 0;
+    int d_row, d_col;
+    // find the number of offsets given the viewradius
+    // for memory allocation
+    for (d_row = -mx; d_row < mx+1; ++d_row)
+        for (d_col = -mx; d_col < mx+1; ++d_col)
+            if (d_row*d_row + d_col*d_col <= game_info->viewradius_sq)
+                count++;                                              
+
+    // first dimension is index offsets, second is row/col
+    game_info->vision_offsets_sq = malloc(count*sizeof(int*));
+    int i;
+    for (i = 0; i < count;  ++i)
+        game_info->vision_offsets_sq[i] = malloc(2*sizeof(int));
+    
+    count = 0;
+    for (d_row = -mx; d_row < mx+1; ++d_row) {
+        for (d_col = -mx; d_col < mx+1; ++d_col) {
+            int d = d_row*d_row + d_col*d_col;
+            if (d <= game_info->viewradius_sq) {
+                // Create all negative offsets so vision will
+                // wrap around the edges properly
+                int row_offset = (d_row % game_info->rows);
+                int col_offset = (d_col % game_info->cols);                
+                if (row_offset >= 0) row_offset -= game_info->rows;
+                if (col_offset >= 0) col_offset -= game_info->cols;      
+                game_info->vision_offsets_sq[count][0] = row_offset;
+                game_info->vision_offsets_sq[count][1] = col_offset;
+                count++;                    
+            }
+        }
+    }    
+}
+
 // initializes the game_info structure on the very first turn
 // function is not called after the game has started
 
@@ -79,6 +119,7 @@ void _init_ants(char *data, struct game_info *game_info) {
         if (strcmp(data, "ready") == 0)
             break;
     }
+    _init_vision_offsets(game_info);
 }
 
 // updates game data with locations of ants and food
