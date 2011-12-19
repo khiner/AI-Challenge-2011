@@ -1,5 +1,14 @@
 #include "ants.h"
 
+const int NUM_AGENTS = 4;
+
+// clear the diffusion agents at the given tile
+void clearDiffusion(struct tile *tile) {
+    int i;
+    for (i = 0; i < NUM_AGENTS; ++i)
+        tile->agents[i] = 0;
+}
+
 // initializes the game_info structure on the very first turn
 // function is not called after the game has started
 
@@ -81,7 +90,7 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
     int i, j;
 
     for (i = 0; i < map_len; ++i) {
-        char current = game_info->map[i];
+        char current = game_info->map[i].state;
 
         if (current == '?' || current == '.' || current == '%')
             continue;
@@ -155,7 +164,7 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
 
     for (i = 0; i < game_info->rows; ++i) {
         for (j = 0; j < game_info->cols; ++j) {
-            char current = game_info->map[game_info->cols*i + j];
+            char current = game_info->map[game_info->cols*i + j].state;
             if (current == '?' || current == '.' || current == '%')
                 continue;
 
@@ -206,7 +215,7 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
                 game_state->dead_ants[dead_count].col = j;
                 game_state->dead_ants[dead_count].player = (current & (~0x80));
                 
-                game_info->map[game_info->cols*i + j] = '!';
+                game_info->map[game_info->cols*i + j].state = '!';
             } else if (isupper(current)) {
                 --hill_count;
 
@@ -249,17 +258,26 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
 
 void _init_map(char *data, struct game_info *game_info) {
 
+    int map_len = game_info->rows*game_info->cols;
+    int i;
+    
     if (game_info->map == 0) {
-        game_info->map = malloc(game_info->rows*game_info->cols);
-        memset(game_info->map, '.', game_info->rows*game_info->cols);
+        game_info->map = malloc(game_info->rows*game_info->cols*sizeof(struct tile));
+        for (i = 0; i < map_len; ++i) {
+            struct tile *newTile = malloc(sizeof(struct tile));            
+            newTile->row = i/game_info->cols;
+            newTile->col = i%game_info->cols;
+            newTile->state = '.';
+            newTile->lastSeen = 0;
+            newTile->seen = 0;
+            clearDiffusion(newTile);
+            game_info->map[i] = *newTile;
+        }       
     }
 
-    int map_len = game_info->rows*game_info->cols;
-    int i = 0;
-
-    for (; i < map_len; ++i)
-        if (game_info->map[i] != '%')
-            game_info->map[i] = '.';
+    for (i = 0; i < map_len; ++i)
+        if (game_info->map[i].state != '%')
+            game_info->map[i].state = '.';
 
     while (*data != 0) {
         char *tmp_data = data;
@@ -294,22 +312,22 @@ void _init_map(char *data, struct game_info *game_info) {
         switch (*data) {
 
             case 'w':
-                game_info->map[offset] = '%';
+                game_info->map[offset].state = '%';
                 break;
             case 'a':
-                if (isdigit(game_info->map[offset]))
-                    game_info->map[offset] = var3 - '0' + 'A';
+                if (isdigit(game_info->map[offset].state))
+                    game_info->map[offset].state = var3 - '0' + 'A';
                 else
-                   game_info->map[offset] = var3 - '0' + 'a';
+                   game_info->map[offset].state = var3 - '0' + 'a';
                 break;
             case 'd':
-                game_info->map[offset] = (((unsigned char) (var3 - '0')) + 0x80);
+                game_info->map[offset].state = (((unsigned char) (var3 - '0')) + 0x80);
                 break;
             case 'f':
-                game_info->map[offset] = '*';
+                game_info->map[offset].state = '*';
                 break;
             case 'h':
-                game_info->map[offset] = var3;
+                game_info->map[offset].state = var3;
                 break;
             default: 
                 break;

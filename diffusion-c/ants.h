@@ -3,6 +3,8 @@
 #include <string.h>
 #include <math.h>
 
+extern const int NUM_AGENTS;
+
 // this header is basically self-documenting
 
 struct game_info {
@@ -15,7 +17,16 @@ struct game_info {
 	int attackradius_sq;
 	int spawnradius_sq;
     int seed;
-	char *map;
+	struct tile* map;    
+};
+
+struct tile {
+    int row;
+    int col;
+    char state;
+    int lastSeen;
+    short seen;
+    int agents[4];    
 };
 
 struct basic_ant {

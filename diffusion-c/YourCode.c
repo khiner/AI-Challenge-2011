@@ -47,24 +47,24 @@ void do_turn(struct game_state *Game, struct game_info *Info) {
         char obj_north, obj_east, obj_south, obj_west;
 
         if (COL != 0)
-            obj_west = Info->map[offset + LEFT];
+            obj_west = Info->map[offset + LEFT].state;
         else
-            obj_west = Info->map[offset + Info->cols - 1];
+            obj_west = Info->map[offset + Info->cols - 1].state;
 
         if (COL != Info->cols - 1)
-            obj_east = Info->map[offset + RIGHT];
+            obj_east = Info->map[offset + RIGHT].state;
         else
-            obj_east = Info->map[offset - Info->cols + 1];
+            obj_east = Info->map[offset - Info->cols + 1].state;
 
         if (ROW != 0)
-            obj_north = Info->map[offset + UP];
+            obj_north = Info->map[offset + UP].state;
         else
-            obj_north = Info->map[offset + (Info->rows - 1)*Info->cols];
+            obj_north = Info->map[offset + (Info->rows - 1)*Info->cols].state;
 
         if (ROW != Info->rows - 1)
-            obj_south = Info->map[offset + DOWN];
+            obj_south = Info->map[offset + DOWN].state;
         else
-            obj_south = Info->map[offset - (Info->rows - 1)*Info->cols];
+            obj_south = Info->map[offset - (Info->rows - 1)*Info->cols].state;
 
         char dir = -1;
 
