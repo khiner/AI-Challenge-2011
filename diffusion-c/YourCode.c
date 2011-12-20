@@ -99,6 +99,8 @@ int do_move_direction(struct tile *tile, char direction,
     if (newTile->state != WATER && newTile->state != MY_ANT &&
         newTile->state != MY_HILL && newTile->state != MY_ANT_AND_HILL) {
         move(tile, direction, Info, Game);
+        tile->state = LAND;
+        newTile->state = MY_ANT;
         return 1;
     } else
         return 0;
