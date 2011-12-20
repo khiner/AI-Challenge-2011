@@ -29,6 +29,7 @@ void _init_vision_offsets(struct game_info *game_info) {
             if (d_row*d_row + d_col*d_col <= game_info->viewradius_sq)
                 count++;                                              
 
+    game_info->vision_offset_length = count;
     // first dimension is index offsets, second is row/col
     game_info->vision_offsets_sq = malloc(count*sizeof(int*));
     int i;
@@ -310,12 +311,13 @@ void _init_map(char *data, struct game_info *game_info) {
     if (game_info->map == 0) {
         game_info->map = malloc(game_info->rows*game_info->cols*sizeof(struct tile));
         for (i = 0; i < map_len; ++i) {
-            struct tile *newTile = malloc(sizeof(struct tile));            
+            struct tile *newTile = malloc(sizeof(struct tile));
+            newTile->state = LAND;            
             newTile->row = i/game_info->cols;
             newTile->col = i%game_info->cols;
-            newTile->state = LAND;
             newTile->lastSeen = 0;
             newTile->seen = 0;
+            newTile->visible = 0;
             clearDiffusion(newTile);
             game_info->map[i] = *newTile;
         }       
@@ -380,5 +382,25 @@ void _init_map(char *data, struct game_info *game_info) {
 
         }
         data = tmp_ptr + 1;
+    }
+}
+
+// set all spaces as not visible,
+// loop through ants and set all tiles around ant as visible
+void updateVision(struct game_info *Info, struct game_state *Game) {
+    int ant_length = sizeof(Game->my_ants)/sizeof(struct my_ant);
+    int i, j;
+
+    for (i = 0; i < Info->rows; ++i)
+        for (j = 0; j < Info->cols; ++j)
+            Info->map[i*Info->cols + j].visible = 0;                
+    
+    for (i = 0; i < ant_length; ++i) {
+        struct my_ant ant = Game->my_ants[i];
+        for (j = 0; j < Info->vision_offset_length; ++j) {
+            int v_row = Info->vision_offsets_sq[j][0] + ant.row;
+            int v_col = Info->vision_offsets_sq[j][1] + ant.col;
+            Info->map[v_row*Info->cols + v_col].visible = 1;
+        }
     }
 }

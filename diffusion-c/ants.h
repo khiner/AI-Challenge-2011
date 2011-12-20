@@ -23,16 +23,18 @@ struct game_info {
 	int attackradius_sq;
 	int spawnradius_sq;
     int seed;
+    int vision_offset_length;
     int **vision_offsets_sq;
 	struct tile* map;
 };
 
 struct tile {
+    char state;    
     int row;
     int col;
-    char state;
     int lastSeen;
     short seen;
+    short visible;
     int agents[4];    
 };
 
@@ -65,12 +67,11 @@ struct game_state {
     struct food *food;
     struct basic_ant *dead_ants;
     struct hill *hill;
-    
+
     int my_count;
     int enemy_count;
     int food_count;
     int dead_count;
     int hill_count;
-
     int my_ant_index;
 };
