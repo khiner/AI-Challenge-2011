@@ -47,19 +47,19 @@ struct tile *tileInDirection(char direction, struct tile *tile,
 }
 
 void diffuse(struct tile *tile, struct game_info *Info, struct game_state *Game) {
-    int goalsToDiffuse[] = {0, 0, 0, 0};
+    int goalsToDiffuse[] = {0, 0, 0};
     
     if (tile->state == WATER) {
         clearDiffusion(tile);
         return;
     }
     if (tile->state == FOOD)
-        tile->agents[FOOD_GOAL] = MAX;
+        tile->agents[FOOD_GOAL] = 1.0;
     else
         goalsToDiffuse[FOOD_GOAL] = 1;
             
     if (tile->state == ENEMY_HILL)
-        tile->agents[HILL_GOAL] = MAX;
+        tile->agents[HILL_GOAL] = 1.0;
     else
         goalsToDiffuse[HILL_GOAL] = 1;
 
@@ -72,16 +72,16 @@ void diffuse(struct tile *tile, struct game_info *Info, struct game_state *Game)
     if (tile->seen)
         goalsToDiffuse[EXPLORE_GOAL] = 1;
     else
-        tile->agents[EXPLORE_GOAL] = MAX;
+        tile->agents[EXPLORE_GOAL] = 1.0;
 
     int goal;
     for (goal = 0; goal < NUM_AGENTS; ++goal) {
         if (goalsToDiffuse[goal]) {
-            char up = tileInDirection('N', tile, Info, Game)->agents[goal];
-            char down = tileInDirection('S', tile, Info, Game)->agents[goal];
-            char left = tileInDirection('W', tile, Info, Game)->agents[goal];
-            char right = tileInDirection('E', tile, Info, Game)->agents[goal];
-            tile->agents[goal] = 0.22*(up +down + left + right);
+            float up = tileInDirection('N', tile, Info, Game)->agents[goal];
+            float down = tileInDirection('S', tile, Info, Game)->agents[goal];
+            float left = tileInDirection('W', tile, Info, Game)->agents[goal];
+            float right = tileInDirection('E', tile, Info, Game)->agents[goal];
+            tile->agents[goal] = 0.20*(up +down + left + right);
         }
     }
 }
@@ -93,31 +93,37 @@ void diffuseAll(struct game_info *Info, struct game_state *Game) {
             diffuse(&Info->map[i*Info->cols + j], Info, Game);
 }
 
-void do_move_direction(struct tile *tile, char direction,
+int do_move_direction(struct tile *tile, char direction,
                        struct game_info *Info, struct game_state *Game) {
     struct tile *newTile = tileInDirection(direction, tile, Info, Game);
     if (newTile->state != WATER && newTile->state != MY_ANT &&
         newTile->state != MY_HILL && newTile->state != MY_ANT_AND_HILL) {
         move(tile, direction, Info, Game);
-    }
+        return 1;
+    } else
+        return 0;
 }
 
 void outputMove(struct tile *tile, int goal, struct game_info *Info, struct game_state *Game) {
-    int highestVal = -1;
+    float highestVal = 0.0;
     char bestDirection = 0;
+    char nextBestDirection = 0;
     char directions[4] = {'S', 'E', 'W', 'N'};
     int i;
     for (i = 0; i < 4; ++i) {
         char direction = directions[i];
         struct tile *otherTile = tileInDirection(direction, tile, Info, Game);
-        int val = otherTile->agents[goal];
+        float val = otherTile->agents[goal];
         if (val > highestVal) {
             highestVal = val;
+            nextBestDirection = bestDirection;
             bestDirection = direction;
         }
     }
-    if (bestDirection)
-        do_move_direction(tile, bestDirection, Info, Game);
+    // if we're blocked at the best direction, do the next best thing
+    if (!(bestDirection && do_move_direction(tile, bestDirection, Info, Game)))
+        if (nextBestDirection)
+            do_move_direction(tile, nextBestDirection, Info, Game);
 }
 
 void do_turn(struct game_state *Game, struct game_info *Info) {
@@ -126,20 +132,23 @@ void do_turn(struct game_state *Game, struct game_info *Info) {
     for (i = 0; i < Game->my_count; ++i) {
 
         struct tile *ant = &Game->my_ants[i];
-        int hill = ant->agents[HILL_GOAL];
-        int food = ant->agents[FOOD_GOAL];
-        int explore = ant->agents[EXPLORE_GOAL];
+        float hill = ant->agents[HILL_GOAL];
+        float food = ant->agents[FOOD_GOAL];
+        float explore = ant->agents[EXPLORE_GOAL];
 
         int goal;
-        if (hill != 0)
+        if (hill != 0) {
+            fprintf(stderr, "hilling\n");                        
             goal = HILL_GOAL;
-        else if (food != 0)
+        }else if (food != 0) {
+            fprintf(stderr, "fooding\n");                        
             goal = FOOD_GOAL;
-        else
+        }else {
+            fprintf(stderr, "exploring\n");            
             goal = EXPLORE_GOAL;
+        }
             
-        //            outputMove(&ant, goal, Info, Game);
-        do_move_direction(ant, 'E', Info, Game);
+        outputMove(ant, goal, Info, Game);
     }
 }
 

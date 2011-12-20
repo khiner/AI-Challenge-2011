@@ -1,7 +1,7 @@
 #include "ants.h"
 
-const int NUM_AGENTS = 4;
-const int MAX = 255;
+const int NUM_AGENTS = 3;
+const int NUM_DIFFUSIONS = 100;
 const char FOOD = '*';
 const char WATER = '%';
 const char LAND = '.';
@@ -21,7 +21,7 @@ const int EXPLORE_GOAL = 2;
 void clearDiffusion(struct tile *tile) {
     int i;
     for (i = 0; i < NUM_AGENTS; ++i)
-        tile->agents[i] = 0;
+        tile->agents[i] = 0.0;
 }
 
 struct tile copyTile(struct tile tile) {

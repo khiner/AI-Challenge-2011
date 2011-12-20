@@ -65,6 +65,19 @@ char *get_line(char *text) {
     return return_str;
 }
 
+void show_debug(struct game_info *Info) {
+    int i;
+    for (i = 0; i < Info->rows*Info->cols; ++i) {
+        struct tile tile = Info->map[i];
+        // food = RED
+        fprintf(stdout, "v sfc %d %d %d %f\n", 255, 0, 0, tile.agents[FOOD_GOAL]);
+        fprintf(stdout, "v tile %d %d\n", tile.row, tile.col);
+        // explore = GREEN
+        fprintf(stdout, "v sfc %d %d %d %f\n", 0, 255, 0, tile.agents[EXPLORE_GOAL]);
+        fprintf(stdout, "v tile %d %d\n", tile.row, tile.col);
+    }        
+}
+
 // main, communicates with tournament engine
 
 int main(int argc, char *argv[]) {
@@ -137,14 +150,16 @@ int main(int argc, char *argv[]) {
             _init_game(&Info, &Game);
             Info.curr_turn++;
             updateVision(&Info, &Game);
-            diffuseAll(&Info, &Game);
+            int i;
+            for (i= 0; i < NUM_DIFFUSIONS; ++i)
+                diffuseAll(&Info, &Game);
+            show_debug(&Info);
             do_turn(&Game, &Info);
             fprintf(stdout, "go\n");
             fflush(stdout);
         }
         else if (action == 1) {
             _init_ants(data + 1, &Info);
-
             Game.my_ant_index = -1;
 
             fprintf(stdout, "go\n");

@@ -1,1 +1,1 @@
-python ../overlay/ants/playgame.py "./MyBot" "python ../overlay/ants/sample_bots/python/HunterBot.py" --map_file ../overlay/ants/maps/example/tutorial1.map --log_dir game_logs --turns 60 --scenario --food symmetric --player_seed 7 --verbose -e -E
+python ../overlay/ants/playgame.py "./MyBot" "python ../overlay/ants/sample_bots/python/HunterBot.py" --map_file ../overlay/ants/maps/example/tutorial1.map --log_dir game_logs --turns 15 --scenario --food symmetric --player_seed 7 --verbose -e -E

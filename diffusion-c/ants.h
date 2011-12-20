@@ -4,6 +4,7 @@
 #include <math.h>
 
 extern const int NUM_AGENTS;
+extern const int NUM_DIFFUSIONS;
 extern const int MAX;
 
 extern const char FOOD;
@@ -45,7 +46,7 @@ struct tile {
     int lastSeen;
     short seen;
     short visible;
-    int agents[4];    
+    float agents[3];    
 };
 
 struct game_state {
