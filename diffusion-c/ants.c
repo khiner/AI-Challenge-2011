@@ -1,11 +1,16 @@
 #include "ants.h"
 
 const int NUM_AGENTS = 4;
-
+const int MAX = 255;
 const char FOOD = '*';
 const char WATER = '%';
 const char LAND = '.';
 const char DEAD = '!';
+const char ENEMY_HILL = 'H';
+
+const int FOOD_GOAL = 0;
+const int HILL_GOAL = 1;
+const int EXPLORE_GOAL = 2;
 
 // clear the diffusion agents at the given tile
 void clearDiffusion(struct tile *tile) {
@@ -19,7 +24,7 @@ void clearDiffusion(struct tile *tile) {
 void _init_vision_offsets(struct game_info *game_info) {
     int mx = (int)(sqrt(game_info->viewradius_sq));
     fprintf(stderr, "mx = %d\n", mx);
-    fprintf(stderr, "rows = %dcols = %d\n", game_info->rows, game_info->cols);        
+    fprintf(stderr, "rows = %dcols = %d\n", game_info->rows, game_info->cols);    
     int count = 0;
     int d_row, d_col;
     // find the number of offsets given the viewradius
@@ -44,12 +49,12 @@ void _init_vision_offsets(struct game_info *game_info) {
                 // Create all negative offsets so vision will
                 // wrap around the edges properly
                 int row_offset = (d_row % game_info->rows);
-                int col_offset = (d_col % game_info->cols);                
+                int col_offset = (d_col % game_info->cols);
                 if (row_offset >= 0) row_offset -= game_info->rows;
                 if (col_offset >= 0) col_offset -= game_info->cols;      
                 game_info->vision_offsets_sq[count][0] = row_offset;
                 game_info->vision_offsets_sq[count][1] = col_offset;
-                count++;                    
+                count++;
             }
         }
     }    
@@ -125,10 +130,9 @@ void _init_ants(char *data, struct game_info *game_info) {
 
 // updates game data with locations of ants and food
 // only the ids of your ants are preserved
-
 void _init_game(struct game_info *game_info, struct game_state *game_state) {
+    game_state->curr_turn++;
     int map_len = game_info->rows*game_info->cols;
-
     int my_count = 0;
     int enemy_count = 0;
     int food_count = 0;
@@ -271,6 +275,7 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
                 game_state->hill[hill_count].player = current - 'A';
                 --enemy_count;
 
+                game_info->map[i*game_info->cols + j].state = ENEMY_HILL;
                 game_state->enemy_ants[enemy_count].row = i;
                 game_state->enemy_ants[enemy_count].col = j;
                 game_state->enemy_ants[enemy_count].player = current - 'A';
@@ -403,4 +408,94 @@ void updateVision(struct game_info *Info, struct game_state *Game) {
             Info->map[v_row*Info->cols + v_col].visible = 1;
         }
     }
+}
+
+struct tile *tileInDirection(char direction, struct tile *tile,
+                      struct game_info *Info, struct game_state *Game) {
+    
+    // defining things just so we can do less writing
+    // UP and DOWN move up and down rows while LEFT and RIGHT
+    // move side to side. The map is just one big array.
+
+    #define UP -Info->cols
+    #define DOWN Info->cols
+    #define LEFT -1
+    #define RIGHT 1
+    
+    // the location within the map array where our ant is currently
+
+    int offset = tile->row*Info->cols + tile->col;
+
+    switch(direction) {
+    case 'W':
+        if (tile->col != 0)
+            return &Info->map[offset + LEFT];
+        else
+            return &Info->map[offset + Info->cols - 1];
+        break;
+    case 'E':
+        if (tile->col != Info->cols - 1)
+            return &Info->map[offset + RIGHT];
+        else
+            return &Info->map[offset - Info->cols + 1];
+        break;
+    case 'N':
+        if (tile->row != 0)
+            return &Info->map[offset + UP];
+        else
+            return &Info->map[offset + (Info->rows - 1)*Info->cols];
+        break;
+    case 'S':
+        if (tile->row != Info->rows - 1)
+            return &Info->map[offset + DOWN];
+        else
+            return &Info->map[offset - (Info->rows - 1)*Info->cols];
+        break;
+    default:
+        return '\0';
+    }
+}
+
+void diffusion(struct tile *tile, struct game_info *Info, struct game_state *Game) {
+    int goalsToDiffuse[] = {0, 0, 0, 0};
+    
+    if (tile->state == WATER) {
+        clearDiffusion(tile);
+        return;
+    }
+    if (tile->state == FOOD)
+        tile->agents[FOOD_GOAL] = MAX;
+    else
+        goalsToDiffuse[FOOD_GOAL] = 1;
+            
+    if (tile->state == ENEMY_HILL)
+        tile->agents[HILL_GOAL] = MAX;
+    else
+        goalsToDiffuse[HILL_GOAL] = 1;
+
+    if (tile->visible) {
+        tile->lastSeen = Game->curr_turn;
+        if (!tile->seen)
+            tile->seen = 1;
+    }
+    
+    if (tile->seen)
+        goalsToDiffuse[EXPLORE_GOAL] = 1;
+    else
+        tile->agents[EXPLORE_GOAL] = MAX;
+
+    int goal;
+    for (goal = 0; goal < NUM_AGENTS; ++goal) {
+        if (goalsToDiffuse[goal]) {
+            char up = tileInDirection('N', tile, Info, Game)->agents[goal];
+            char down = tileInDirection('S', tile, Info, Game)->agents[goal];
+            char left = tileInDirection('W', tile, Info, Game)->agents[goal];
+            char right = tileInDirection('E', tile, Info, Game)->agents[goal];
+            tile->agents[goal] = 0.22*(up +down + left + right);
+        }
+    }
+}
+
+int diffusionValueAt(int goal, struct my_ant *ant, struct game_info *Info) {
+    return Info->map[ant->row*Info->cols + ant->col].agents[goal];
 }

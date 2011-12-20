@@ -4,12 +4,17 @@
 #include <math.h>
 
 extern const int NUM_AGENTS;
+extern const int MAX;
 
 extern const char FOOD;
 extern const char WATER;
 extern const char LAND;
 extern const char DEAD;
+extern const char ENEMY_HILL;
 
+extern const int FOOD_GOAL;
+extern const int HILL_GOAL;
+extern const int EXPLORE_GOAL;
 
 // this header is basically self-documenting
 
@@ -74,4 +79,5 @@ struct game_state {
     int dead_count;
     int hill_count;
     int my_ant_index;
+    int curr_turn;
 };

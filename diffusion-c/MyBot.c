@@ -37,7 +37,6 @@ int distance(int row1, int col1, int row2, int col2, struct game_info *Info) {
 
 void move(int index, char dir, struct game_state* Game, struct game_info* Info) {
     fprintf(stdout, "O %i %i %c\n", Game->my_ants[index].row, Game->my_ants[index].col, dir);
-
     switch (dir) {
         case 'N':
             if (Game->my_ants[index].row != 0)
