@@ -1,15 +1,8 @@
 #include "ants.h"
 
-// The following is an example program displaying a basic ai that
-// tries all possible directions and then moves in whichever one
-// is not blocked by water (% characters).
-//
-// To see all the information contained in struct game_state and
-// struct game_info check ants.h. There is also a distance function
-// provided in bot.c
-
-void do_turn(struct game_state *Game, struct game_info *Info) {
-
+struct tile *tileInDirection(char direction, struct tile *tile,
+                      struct game_info *Info, struct game_state *Game) {
+    
     // defining things just so we can do less writing
     // UP and DOWN move up and down rows while LEFT and RIGHT
     // move side to side. The map is just one big array.
@@ -18,77 +11,135 @@ void do_turn(struct game_state *Game, struct game_info *Info) {
     #define DOWN Info->cols
     #define LEFT -1
     #define RIGHT 1
+    
+    // the location within the map array where our ant is currently
 
-    int i;
+    int offset = tile->row*Info->cols + tile->col;
 
-    for (i = 0; i < Game->my_count; ++i) {
-
-        // the location within the map array where our ant is currently
-
-        int offset = Game->my_ants[i].row*Info->cols + Game->my_ants[i].col;
-
-        // defining things to do less writing again
-
-        #define ROW Game->my_ants[i].row
-        #define COL Game->my_ants[i].col
-        #define ID Game->my_ants[i].id
-
-        // Now here is the tricky part. We have to account for
-        // the fact that the map wraps (when you go off one edge
-        // you end up on the side of the map opposite that edge).
-        // This is done by checking to see if we are on the last
-        // row or column and if the direction we are taking would
-        // take us off the side of the map.
-        //
-        // For example, you can see here the West direction checks
-        // to see if we are in the first column, in which case "West"
-        // is a character a full row minus one from our location.
-
-        char obj_north, obj_east, obj_south, obj_west;
-
-        if (COL != 0)
-            obj_west = Info->map[offset + LEFT].state;
+    switch(direction) {
+    case 'W':
+        if (tile->col != 0)
+            return &Info->map[offset + LEFT];
         else
-            obj_west = Info->map[offset + Info->cols - 1].state;
-
-        if (COL != Info->cols - 1)
-            obj_east = Info->map[offset + RIGHT].state;
+            return &Info->map[offset + Info->cols - 1];
+        break;
+    case 'E':
+        if (tile->col != Info->cols - 1)
+            return &Info->map[offset + RIGHT];
         else
-            obj_east = Info->map[offset - Info->cols + 1].state;
-
-        if (ROW != 0)
-            obj_north = Info->map[offset + UP].state;
+            return &Info->map[offset - Info->cols + 1];
+        break;
+    case 'N':
+        if (tile->row != 0)
+            return &Info->map[offset + UP];
         else
-            obj_north = Info->map[offset + (Info->rows - 1)*Info->cols].state;
-
-        if (ROW != Info->rows - 1)
-            obj_south = Info->map[offset + DOWN].state;
+            return &Info->map[offset + (Info->rows - 1)*Info->cols];
+        break;
+    case 'S':
+        if (tile->row != Info->rows - 1)
+            return &Info->map[offset + DOWN];
         else
-            obj_south = Info->map[offset - (Info->rows - 1)*Info->cols].state;
+            return &Info->map[offset - (Info->rows - 1)*Info->cols];
+        break;
+    default:
+        return '\0';
+    }
+}
 
-        char dir = -1;
+void diffuse(struct tile *tile, struct game_info *Info, struct game_state *Game) {
+    int goalsToDiffuse[] = {0, 0, 0, 0};
+    
+    if (tile->state == WATER) {
+        clearDiffusion(tile);
+        return;
+    }
+    if (tile->state == FOOD)
+        tile->agents[FOOD_GOAL] = MAX;
+    else
+        goalsToDiffuse[FOOD_GOAL] = 1;
+            
+    if (tile->state == ENEMY_HILL)
+        tile->agents[HILL_GOAL] = MAX;
+    else
+        goalsToDiffuse[HILL_GOAL] = 1;
 
-        // cycle through the directions, pick one that works
-
-        if (obj_north != '%')
-            dir = 'N';
-        else if (obj_east != '%')
-            dir = 'E';
-        else if (obj_south != '%')
-            dir = 'S';
-        else if (obj_west != '%')
-            dir = 'W';
-
-        // Now we do our move
-
-        if (dir != -1)
-            move(i, dir, Game, Info);
+    if (tile->visible) {
+        tile->lastSeen = Info->curr_turn;
+        if (!tile->seen)
+            tile->seen = 1;
     }
 
-    // There are many ways to make this program better.
-    // For starters, try to avoid collisions between your
-    // own ants and make a conscious effort to gather food
-    // instead of walking around at random.
-    //
-    // Good luck!
+    if (tile->seen)
+        goalsToDiffuse[EXPLORE_GOAL] = 1;
+    else
+        tile->agents[EXPLORE_GOAL] = MAX;
+
+    int goal;
+    for (goal = 0; goal < NUM_AGENTS; ++goal) {
+        if (goalsToDiffuse[goal]) {
+            char up = tileInDirection('N', tile, Info, Game)->agents[goal];
+            char down = tileInDirection('S', tile, Info, Game)->agents[goal];
+            char left = tileInDirection('W', tile, Info, Game)->agents[goal];
+            char right = tileInDirection('E', tile, Info, Game)->agents[goal];
+            tile->agents[goal] = 0.22*(up +down + left + right);
+        }
+    }
 }
+
+void diffuseAll(struct game_info *Info, struct game_state *Game) {
+    int i, j;
+    for (i = 0; i < Info->rows; ++i)
+        for (j = 0; j < Info->cols; ++j)
+            diffuse(&Info->map[i*Info->cols + j], Info, Game);
+}
+
+void do_move_direction(struct tile *tile, char direction,
+                       struct game_info *Info, struct game_state *Game) {
+    struct tile *newTile = tileInDirection(direction, tile, Info, Game);
+    if (newTile->state != WATER && newTile->state != MY_ANT &&
+        newTile->state != MY_HILL && newTile->state != MY_ANT_AND_HILL) {
+        move(tile, direction, Info, Game);
+    }
+}
+
+void outputMove(struct tile *tile, int goal, struct game_info *Info, struct game_state *Game) {
+    int highestVal = -1;
+    char bestDirection = 0;
+    char directions[4] = {'S', 'E', 'W', 'N'};
+    int i;
+    for (i = 0; i < 4; ++i) {
+        char direction = directions[i];
+        struct tile *otherTile = tileInDirection(direction, tile, Info, Game);
+        int val = otherTile->agents[goal];
+        if (val > highestVal) {
+            highestVal = val;
+            bestDirection = direction;
+        }
+    }
+    if (bestDirection)
+        do_move_direction(tile, bestDirection, Info, Game);
+}
+
+void do_turn(struct game_state *Game, struct game_info *Info) {
+    // move
+    int i;    
+    for (i = 0; i < Game->my_count; ++i) {
+
+        struct tile *ant = &Game->my_ants[i];
+        int hill = ant->agents[HILL_GOAL];
+        int food = ant->agents[FOOD_GOAL];
+        int explore = ant->agents[EXPLORE_GOAL];
+
+        int goal;
+        if (hill != 0)
+            goal = HILL_GOAL;
+        else if (food != 0)
+            goal = FOOD_GOAL;
+        else
+            goal = EXPLORE_GOAL;
+            
+        //            outputMove(&ant, goal, Info, Game);
+        do_move_direction(ant, 'E', Info, Game);
+    }
+}
+

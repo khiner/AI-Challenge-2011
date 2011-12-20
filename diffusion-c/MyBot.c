@@ -35,34 +35,11 @@ int distance(int row1, int col1, int row2, int col2, struct game_info *Info) {
 
 // sends a move to the tournament engine and keeps track of ants new location
 
-void move(int index, char dir, struct game_state* Game, struct game_info* Info) {
-    fprintf(stdout, "O %i %i %c\n", Game->my_ants[index].row, Game->my_ants[index].col, dir);
-    switch (dir) {
-        case 'N':
-            if (Game->my_ants[index].row != 0)
-                Game->my_ants[index].row -= 1;
-            else
-                Game->my_ants[index].row = Info->rows - 1;
-            break;
-        case 'E':
-            if (Game->my_ants[index].col != Info->cols - 1)
-                Game->my_ants[index].col += 1;
-            else
-                Game->my_ants[index].col = 0;
-            break;
-        case 'S':
-            if (Game->my_ants[index].row != Info->rows - 1)
-                Game->my_ants[index].row += 1;
-            else
-                Game->my_ants[index].row = 0;
-            break;
-        case 'W':
-            if (Game->my_ants[index].col != 0)
-                Game->my_ants[index].col -= 1;
-            else
-                Game->my_ants[index].col = Info->cols - 1;
-            break;
-    }
+void move(struct tile *ant, char dir, struct game_info* Info, struct game_state* Game) {
+    if (ant->state == MY_ANT || ant->state == MY_ANT_AND_HILL) // sanity check
+        fprintf(stdout, "O %i %i %c\n", ant->row, ant->col, dir);
+    else
+        fprintf(stderr, "oops! tried moving non-ant tile!\n");        
 }
 
 // just a function that returns the string on a given line for i/o
@@ -99,10 +76,9 @@ int main(int argc, char *argv[]) {
 
     Game.my_ants = 0;
     Game.enemy_ants = 0;
-    Game.food = 0;
-    Game.dead_ants = 0;
-    Game.hill = 0;
-
+    Game.my_hills = 0;
+    Game.enemy_hills = 0;
+    
     while (42) {
         int initial_buffer = 100000;
 
@@ -157,9 +133,11 @@ int main(int argc, char *argv[]) {
             while (*++skip_line != '\n');
             ++skip_line;
 
-            _init_map(skip_line, &Info);
+            _init_map(skip_line, &Info, &Game);
             _init_game(&Info, &Game);
+            Info.curr_turn++;
             updateVision(&Info, &Game);
+            diffuseAll(&Info, &Game);
             do_turn(&Game, &Info);
             fprintf(stdout, "go\n");
             fflush(stdout);
@@ -172,7 +150,6 @@ int main(int argc, char *argv[]) {
             fprintf(stdout, "go\n");
             fflush(stdout);
         }
-
         free(data);
     }
 }

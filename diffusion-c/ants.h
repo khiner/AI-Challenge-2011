@@ -10,8 +10,12 @@ extern const char FOOD;
 extern const char WATER;
 extern const char LAND;
 extern const char DEAD;
-extern const char ENEMY_HILL;
-
+extern const int ENEMY_HILL;
+extern const int MY_HILL;
+extern const char MY_ANT;
+extern const char ENEMY_ANT;
+extern const char MY_ANT_AND_HILL;
+extern const char ENEMY_ANT_AND_HILL;
 extern const int FOOD_GOAL;
 extern const int HILL_GOAL;
 extern const int EXPLORE_GOAL;
@@ -21,6 +25,7 @@ extern const int EXPLORE_GOAL;
 struct game_info {
 	int loadtime;
 	int turntime;
+    int curr_turn;    
 	int rows;
 	int cols;
 	int turns;
@@ -43,41 +48,17 @@ struct tile {
     int agents[4];    
 };
 
-struct basic_ant {
-    int row;
-    int col;
-    char player;
-};
-
-struct my_ant {
-    int id;
-    int row;
-    int col;
-};
-
-struct food {
-    int row;
-    int col;
-};
-
-struct hill {
-    int row;
-    int col;
-    char player;
-};
-
 struct game_state {
-    struct my_ant *my_ants;
-    struct basic_ant *enemy_ants;
-    struct food *food;
-    struct basic_ant *dead_ants;
-    struct hill *hill;
+    struct tile *my_ants;
+    struct tile *enemy_ants;
+    struct tile *my_hills;
+    struct tile *enemy_hills;
 
     int my_count;
     int enemy_count;
     int food_count;
     int dead_count;
-    int hill_count;
+    int my_hill_count;
+    int enemy_hill_count;
     int my_ant_index;
-    int curr_turn;
 };
