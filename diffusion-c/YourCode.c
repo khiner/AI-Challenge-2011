@@ -137,8 +137,7 @@ void do_turn(struct game_state *Game, struct game_info *Info) {
     // move
     int i;    
     for (i = 0; i < Game->my_count; ++i) {
-
-        struct tile *ant = &Game->my_ants[i];
+        struct tile *ant = &Info->map[Game->my_ants[i]];
         float hill = ant->agents[HILL_GOAL];
         float food = ant->agents[FOOD_GOAL];
         float explore = ant->agents[EXPLORE_GOAL];

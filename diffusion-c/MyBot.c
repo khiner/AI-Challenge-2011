@@ -1,7 +1,7 @@
 #include "ants.h"
 
 // returns the absolute value of a number; used in distance function
-const int DEBUG = 1;
+const int DEBUG = 0;
 
 int abs(int x) {
     if (x >= 0)

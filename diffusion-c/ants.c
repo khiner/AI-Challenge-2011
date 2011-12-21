@@ -24,12 +24,6 @@ void clearDiffusion(struct tile *tile) {
         tile->agents[i] = 0.0;
 }
 
-struct tile copyTile(struct tile tile) {
-    struct tile *newTile = malloc(sizeof(struct tile));
-    memcpy((void *)newTile, (void *)&tile, sizeof(struct tile));
-    return *newTile;
-}
-
 // precalculate tiles around an ant to set as visible
 //should only be called once, since the vision offsets don't change
 void _init_vision_offsets(struct game_info *game_info) {
@@ -152,20 +146,20 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
     if (game_state->enemy_hills != 0)
         free(game_state->enemy_hills);
     
-    game_state->my_ants = malloc(game_state->my_count*sizeof(struct tile));
+    game_state->my_ants = malloc(game_state->my_count*sizeof(int));
 
     if (game_state->enemy_count > 0)
-        game_state->enemy_ants = malloc(game_state->enemy_count*sizeof(struct tile));
+        game_state->enemy_ants = malloc(game_state->enemy_count*sizeof(int));
     else
         game_state->enemy_ants = 0;
 
     if (game_state->my_hill_count > 0)
-        game_state->my_hills = malloc(game_state->my_hill_count*sizeof(struct tile));
+        game_state->my_hills = malloc(game_state->my_hill_count*sizeof(int));
     else
         game_state->my_hills = 0;
 
     if (game_state->enemy_hill_count > 0)
-        game_state->enemy_hills = malloc(game_state->enemy_hill_count*sizeof(struct tile));
+        game_state->enemy_hills = malloc(game_state->enemy_hill_count*sizeof(int));
     else
         game_state->enemy_hills = 0;
     
@@ -180,26 +174,26 @@ void _init_game(struct game_info *game_info, struct game_state *game_state) {
         if (current.state == LAND || current.state == WATER)
                 continue;
         else if (current.state == MY_HILL) {
-            game_state->my_hills[my_hill_count] = copyTile(current);
+            game_state->my_hills[my_hill_count] = i;
             ++my_hill_count;
         } else if (current.state == ENEMY_HILL) {
-            game_state->enemy_hills[enemy_hill_count] = copyTile(current);
+            game_state->enemy_hills[enemy_hill_count] = i;
             ++enemy_hill_count;
         } else if (current.state == MY_ANT_AND_HILL) {
-            game_state->my_hills[my_hill_count] = copyTile(current);
-            game_state->my_ants[my_count] = copyTile(current);
+            game_state->my_hills[my_hill_count] = i;
+            game_state->my_ants[my_count] = i;
             ++my_hill_count;            
             ++my_count;
         } else if (current.state == ENEMY_ANT_AND_HILL) {
-            game_state->enemy_hills[enemy_hill_count] = copyTile(current);
-            game_state->enemy_ants[enemy_count] = copyTile(current);
+            game_state->enemy_hills[enemy_hill_count] = i;
+            game_state->enemy_ants[enemy_count] = i;
             ++enemy_hill_count;
             ++enemy_count;
         } else if (current.state == ENEMY_ANT) {
-            game_state->enemy_ants[enemy_count] = copyTile(current);
+            game_state->enemy_ants[enemy_count] = i;
             ++enemy_count;
         } else if (current.state == MY_ANT) {
-            game_state->my_ants[my_count] = copyTile(current);
+            game_state->my_ants[my_count] = i;
             ++my_count;
         }
     }
@@ -345,7 +339,7 @@ void updateVision(struct game_info *Info, struct game_state *Game) {
     for (i = 0; i < Info->rows*Info->cols; ++i)
         Info->map[i].visible = 0;
     for (i = 0; i < Game->my_count; ++i) {
-        struct tile ant = Game->my_ants[i];
+        struct tile ant = Info->map[Game->my_ants[i]];
         for (j = 0; j < Info->vision_offset_length; ++j) {
             int row = (Info->vision_offsets_sq[j][0] + ant.row) % Info->rows;
             int col = (Info->vision_offsets_sq[j][1] + ant.col) % Info->cols;

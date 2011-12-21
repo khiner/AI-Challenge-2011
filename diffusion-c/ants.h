@@ -50,10 +50,11 @@ struct tile {
 };
 
 struct game_state {
-    struct tile *my_ants;
-    struct tile *enemy_ants;
-    struct tile *my_hills;
-    struct tile *enemy_hills;
+    // arrays of indices into the game_info->map tiles for fast access
+    int *my_ants;
+    int *enemy_ants;
+    int *my_hills;
+    int *enemy_hills;
 
     int my_count;
     int enemy_count;
