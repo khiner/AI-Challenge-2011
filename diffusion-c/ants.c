@@ -247,7 +247,13 @@ void _init_map(char *data, struct game_info *game_info, struct game_state *game_
         // keep hills in memory even after they are not visible
         if (tile.state == MY_HILL) ++my_hill_count;
         else if (tile.state == ENEMY_HILL) ++enemy_hill_count;
-        else if (tile.state != WATER)
+        else if (tile.state == MY_ANT_AND_HILL) {
+            tile.state = MY_HILL;
+            ++my_hill_count;
+        } else if (tile.state == ENEMY_ANT_AND_HILL) {
+            tile.state = ENEMY_HILL;
+            ++enemy_hill_count;
+        } else if (tile.state != WATER)
             game_info->map[i].state = LAND;
     }
     
@@ -335,7 +341,6 @@ void _init_map(char *data, struct game_info *game_info, struct game_state *game_
 // loop through ants and set all tiles around ant as visible
 void updateVision(struct game_info *Info, struct game_state *Game) {
     int i, j;
-    fprintf(stdout, "v sfc %d %d %d %d", 255, 0, 0, 150); // for display debug    
     // set all tiles as not visible
     for (i = 0; i < Info->rows*Info->cols; ++i)
         Info->map[i].visible = 0;
@@ -346,7 +351,6 @@ void updateVision(struct game_info *Info, struct game_state *Game) {
             int col = (Info->vision_offsets_sq[j][1] + ant.col) % Info->cols;
             if (row < 0) row = Info->rows + row;
             if (col < 0) col = Info->cols + col;
-            fprintf(stdout, "v tile %d %d\n", row, col);
             Info->map[row*Info->cols + col].visible = 1;
         }
     }

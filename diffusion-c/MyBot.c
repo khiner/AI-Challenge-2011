@@ -1,6 +1,7 @@
 #include "ants.h"
 
 // returns the absolute value of a number; used in distance function
+const int DEBUG = 1;
 
 int abs(int x) {
     if (x >= 0)
@@ -33,18 +34,7 @@ int distance(int row1, int col1, int row2, int col2, struct game_info *Info) {
     return sqrt(pow(dr, 2) + pow(dc, 2));
 }
 
-// sends a move to the tournament engine and keeps track of ants new location
-
-void move(struct tile *ant, char dir, struct game_info* Info, struct game_state* Game) {
-    if (ant->state == MY_ANT || ant->state == MY_ANT_AND_HILL) // sanity check
-        fprintf(stdout, "O %i %i %c\n", ant->row, ant->col, dir);
-    else
-        fprintf(stderr, "oops! tried moving non-ant tile!\n");        
-}
-
-// just a function that returns the string on a given line for i/o
-// you don't need to worry about this
-
+// returns the string on a given line for i/o
 char *get_line(char *text) {
     char *tmp_ptr = text;
     int len = 0;
@@ -70,11 +60,14 @@ void show_debug(struct game_info *Info) {
     for (i = 0; i < Info->rows*Info->cols; ++i) {
         struct tile tile = Info->map[i];
         // food = RED
-        fprintf(stdout, "v sfc %d %d %d %f\n", 255, 0, 0, tile.agents[FOOD_GOAL]);
-        fprintf(stdout, "v tile %d %d\n", tile.row, tile.col);
+        fprintf(stdout, "v sfc %d %d %d %f\n", (int)(255*tile.agents[FOOD_GOAL]), 0, 0, .5);
+        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
         // explore = GREEN
-        fprintf(stdout, "v sfc %d %d %d %f\n", 0, 255, 0, tile.agents[EXPLORE_GOAL]);
-        fprintf(stdout, "v tile %d %d\n", tile.row, tile.col);
+        fprintf(stdout, "v sfc %d %d %d %f\n", 0, (int)(255*tile.agents[EXPLORE_GOAL]), 0, .5);
+        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
+        // hill = BLUE
+        fprintf(stdout, "v sfc %d %d %d %f\n", 0, 0, (int)(255*tile.agents[HILL_GOAL]), .5);
+        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
     }        
 }
 
@@ -153,7 +146,8 @@ int main(int argc, char *argv[]) {
             int i;
             for (i= 0; i < NUM_DIFFUSIONS; ++i)
                 diffuseAll(&Info, &Game);
-            show_debug(&Info);
+            if (DEBUG)
+                show_debug(&Info);
             do_turn(&Game, &Info);
             fprintf(stdout, "go\n");
             fflush(stdout);

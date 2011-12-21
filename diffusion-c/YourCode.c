@@ -58,7 +58,7 @@ void diffuse(struct tile *tile, struct game_info *Info, struct game_state *Game)
     else
         goalsToDiffuse[FOOD_GOAL] = 1;
             
-    if (tile->state == ENEMY_HILL)
+    if (tile->state == ENEMY_HILL || tile->state == ENEMY_ANT_AND_HILL)
         tile->agents[HILL_GOAL] = 1.0;
     else
         goalsToDiffuse[HILL_GOAL] = 1;
@@ -93,13 +93,18 @@ void diffuseAll(struct game_info *Info, struct game_state *Game) {
             diffuse(&Info->map[i*Info->cols + j], Info, Game);
 }
 
-int do_move_direction(struct tile *tile, char direction,
+// sanity check the move of ant in direction,
+// send the move to the tournament engine, and
+// update ant location to avoid collisions
+int do_move_direction(struct tile *ant, char dir,
                        struct game_info *Info, struct game_state *Game) {
-    struct tile *newTile = tileInDirection(direction, tile, Info, Game);
+    struct tile *newTile = tileInDirection(dir, ant, Info, Game);
     if (newTile->state != WATER && newTile->state != MY_ANT &&
-        newTile->state != MY_HILL && newTile->state != MY_ANT_AND_HILL) {
-        move(tile, direction, Info, Game);
-        tile->state = LAND;
+        newTile->state != MY_HILL && newTile->state != MY_ANT_AND_HILL &&
+        (ant->state == MY_ANT || ant->state == MY_ANT_AND_HILL)) {
+        fprintf(stdout, "O %i %i %c\n", ant->row, ant->col, dir);
+        // take care of
+        ant->state = LAND;
         newTile->state = MY_ANT;
         return 1;
     } else
@@ -139,16 +144,12 @@ void do_turn(struct game_state *Game, struct game_info *Info) {
         float explore = ant->agents[EXPLORE_GOAL];
 
         int goal;
-        if (hill != 0) {
-            fprintf(stderr, "hilling\n");                        
+        if (hill != 0)
             goal = HILL_GOAL;
-        }else if (food != 0) {
-            fprintf(stderr, "fooding\n");                        
+        else if (food != 0)
             goal = FOOD_GOAL;
-        }else {
-            fprintf(stderr, "exploring\n");            
+        else
             goal = EXPLORE_GOAL;
-        }
             
         outputMove(ant, goal, Info, Game);
     }
