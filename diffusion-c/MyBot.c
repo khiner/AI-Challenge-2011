@@ -1,7 +1,7 @@
 #include "ants.h"
 
 // returns the absolute value of a number; used in distance function
-const int DEBUG = false;
+const int DEBUG = true;
 
 int abs(int x) {
     if (x >= 0)
@@ -68,11 +68,14 @@ void show_debug(struct game_info *Info) {
         // hill = BLUE
         //        fprintf(stdout, "v sfc %d %d %d %f\n", 0, 0, (int)(255*tile.agents[HILL_GOAL]), .5);
         //        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
-            fprintf(stdout, "v sfc %d %d %d %f\n", 0, 0, 0, .5*tile.my_attack_influence);
-            fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
-            fprintf(stdout, "v sfc %d %d %d %f\n", 255, 255, 255, .5*tile.enemy_attack_influence);
-            fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
-            
+        if (tile.combat == SAFE)
+            fprintf(stdout, "v sfc %d %d %d %f\n", 0, 255, 0, .5);
+        else if (tile.combat == KILL)
+            fprintf(stdout, "v sfc %d %d %d %f\n", 0, 0, 255, .5);
+        else if (tile.combat == DIE)
+            fprintf(stdout, "v sfc %d %d %d %f\n", 255, 0, 0, .5);
+        
+        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
     }        
 }
 

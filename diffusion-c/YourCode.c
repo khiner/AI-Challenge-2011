@@ -55,7 +55,8 @@ int do_move_direction(struct tile *ant, char dir,
     struct tile *newTile = tileInDirection(dir, ant, Info, Game);
     if (newTile->state != WATER && newTile->state != MY_ANT &&
         newTile->state != MY_HILL && newTile->state != MY_ANT_AND_HILL &&
-        (ant->state == MY_ANT || ant->state == MY_ANT_AND_HILL)) {
+        (ant->state == MY_ANT || ant->state == MY_ANT_AND_HILL) &&
+        newTile->combat == SAFE) {
         fprintf(stdout, "O %i %i %c\n", ant->row, ant->col, dir);
         // take care of
         ant->state = LAND;

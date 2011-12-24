@@ -498,5 +498,33 @@ void updateCombat(struct game_info *Info, struct game_state *Game) {
             }
         }
     }
+    // find the best enemy ant, i.e. the one that is fighting the least
+    // number of other ants, for every tile I could potentially move into.
+    // then we can compore my weakness (the number of ants I'll be fighting)
+    // to the best enemy's weakness (the number of ants it will be fighting)
+    for (i = 0; i < Game->my_count; ++i) {
+        struct tile my_ant = Info->map[Game->my_ants[i]];
+        for (j = 0; j < 4; ++j) {
+            struct tile *neighbor = tileInDirection(directions[j], &my_ant, Info, Game);
+            if (neighbor->state != WATER) {
+                int fighting = 100;                
+                for (k = 0; k < Info->attack_offset_length; ++k) {
+                    int row = (Info->attack_offsets_sq[k][0] + neighbor->row) % Info->rows;
+                    int col = (Info->attack_offsets_sq[k][1] + neighbor->col) % Info->cols;
+                    if (row < 0) row = Info->rows + row;
+                    if (col < 0) col = Info->cols + col;
+                    struct tile *tile = &Info->map[row*Info->cols + col];
+                    if (tile->my_attack_influence < fighting)
+                        fighting = tile->my_attack_influence;
+                }
+                if (neighbor->enemy_attack_influence < fighting)
+                    neighbor->combat = SAFE;
+                else if (neighbor->enemy_attack_influence == fighting)
+                    neighbor->combat = KILL;
+                else
+                    neighbor->combat = DIE;
+            }
+        }
+    }
     
 }

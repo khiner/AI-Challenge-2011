@@ -74,7 +74,7 @@ struct tile {
     int col;
     int lastSeen;
     int my_attack_influence;
-    int enemy_attack_influence;    
+    int enemy_attack_influence;
     bool seen;
     bool visible;
     short combat;
