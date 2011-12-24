@@ -1,7 +1,7 @@
 #include "ants.h"
 
 // returns the absolute value of a number; used in distance function
-const int DEBUG = 0;
+const int DEBUG = false;
 
 int abs(int x) {
     if (x >= 0)
@@ -60,14 +60,19 @@ void show_debug(struct game_info *Info) {
     for (i = 0; i < Info->rows*Info->cols; ++i) {
         struct tile tile = Info->map[i];
         // food = RED
-        fprintf(stdout, "v sfc %d %d %d %f\n", (int)(255*tile.agents[FOOD_GOAL]), 0, 0, .5);
-        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
+        //        fprintf(stdout, "v sfc %d %d %d %f\n", (int)(255*tile.agents[FOOD_GOAL]), 0, 0, .5);
+        //        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
         // explore = GREEN
-        fprintf(stdout, "v sfc %d %d %d %f\n", 0, (int)(255*tile.agents[EXPLORE_GOAL]), 0, .5);
-        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
+        //        fprintf(stdout, "v sfc %d %d %d %f\n", 0, (int)(255*tile.agents[EXPLORE_GOAL]), 0, .5);
+        //        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
         // hill = BLUE
-        fprintf(stdout, "v sfc %d %d %d %f\n", 0, 0, (int)(255*tile.agents[HILL_GOAL]), .5);
-        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
+        //        fprintf(stdout, "v sfc %d %d %d %f\n", 0, 0, (int)(255*tile.agents[HILL_GOAL]), .5);
+        //        fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
+            fprintf(stdout, "v sfc %d %d %d %f\n", 0, 0, 0, .5*tile.my_attack_influence);
+            fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
+            fprintf(stdout, "v sfc %d %d %d %f\n", 255, 255, 255, .5*tile.enemy_attack_influence);
+            fprintf(stdout, "v t %d %d\n", tile.row, tile.col);
+            
     }        
 }
 
@@ -143,6 +148,7 @@ int main(int argc, char *argv[]) {
             _init_game(&Info, &Game);
             Info.curr_turn++;
             updateVision(&Info, &Game);
+            updateCombat(&Info, &Game);
             int i;
             for (i= 0; i < NUM_DIFFUSIONS; ++i)
                 diffuseAll(&Info, &Game);

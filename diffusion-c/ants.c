@@ -1,7 +1,10 @@
 #include "ants.h"
 
+const char directions[4] = {'N', 'E', 'S', 'W'};
+
 const int NUM_AGENTS = 3;
 const int NUM_DIFFUSIONS = 100;
+
 const char FOOD = '*';
 const char WATER = '%';
 const char LAND = '.';
@@ -16,6 +19,56 @@ const char ENEMY_ANT_AND_HILL = 'B';
 const int FOOD_GOAL = 0;
 const int HILL_GOAL = 1;
 const int EXPLORE_GOAL = 2;
+
+const int SAFE = 0;
+const int KILL = 1;
+const int DIE = 2;
+
+struct tile *tileInDirection(char direction, struct tile *tile,
+                      struct game_info *Info, struct game_state *Game) {
+    
+    // defining things just so we can do less writing
+    // UP and DOWN move up and down rows while LEFT and RIGHT
+    // move side to side. The map is just one big array.
+
+    #define UP -Info->cols
+    #define DOWN Info->cols
+    #define LEFT -1
+    #define RIGHT 1
+    
+    // the location within the map array where our ant is currently
+
+    int offset = tile->row*Info->cols + tile->col;
+
+    switch(direction) {
+    case 'W':
+        if (tile->col != 0)
+            return &Info->map[offset + LEFT];
+        else
+            return &Info->map[offset + Info->cols - 1];
+        break;
+    case 'E':
+        if (tile->col != Info->cols - 1)
+            return &Info->map[offset + RIGHT];
+        else
+            return &Info->map[offset - Info->cols + 1];
+        break;
+    case 'N':
+        if (tile->row != 0)
+            return &Info->map[offset + UP];
+        else
+            return &Info->map[offset + (Info->rows - 1)*Info->cols];
+        break;
+    case 'S':
+        if (tile->row != Info->rows - 1)
+            return &Info->map[offset + DOWN];
+        else
+            return &Info->map[offset - (Info->rows - 1)*Info->cols];
+        break;
+    default:
+        return '\0';
+    }
+}
 
 // clear the diffusion agents at the given tile
 void clearDiffusion(struct tile *tile) {
@@ -57,6 +110,41 @@ void _init_vision_offsets(struct game_info *game_info) {
                 if (col_offset >= 0) col_offset -= game_info->cols;      
                 game_info->vision_offsets_sq[count][0] = row_offset;
                 game_info->vision_offsets_sq[count][1] = col_offset;
+                count++;
+            }
+        }
+    }    
+}
+
+void _init_attack_offsets(struct game_info *Info) {
+    int mx = (int)(sqrt(Info->attackradius_sq));
+    int count = 0;
+    int d_row, d_col;
+    // find the number of offsets given the viewradius
+    // for memory allocation
+    for (d_row = -mx; d_row < mx+1; ++d_row)
+        for (d_col = -mx; d_col < mx+1; ++d_col)
+            if (d_row*d_row + d_col*d_col <= Info->attackradius_sq)
+                count++;                                              
+
+    Info->attack_offset_length = count;
+    // first dimension is index offsets, second is row/col
+    Info->attack_offsets_sq = malloc(count*sizeof(int*));
+    int i;
+    for (i = 0; i < count;  ++i)
+        Info->attack_offsets_sq[i] = malloc(2*sizeof(int));
+    
+    count = 0;
+    for (d_row = -mx; d_row < mx+1; ++d_row) {
+        for (d_col = -mx; d_col < mx+1; ++d_col) {
+            int d = d_row*d_row + d_col*d_col;
+            if (d <= Info->attackradius_sq) {
+                // Create all negative offsets so vision will
+                // wrap around the edges properly
+                int row_offset = (d_row % Info->rows);
+                int col_offset = (d_col % Info->cols);
+                Info->attack_offsets_sq[count][0] = row_offset;
+                Info->attack_offsets_sq[count][1] = col_offset;
                 count++;
             }
         }
@@ -130,6 +218,7 @@ void _init_ants(char *data, struct game_info *game_info) {
     }
     game_info->curr_turn = 0;
     _init_vision_offsets(game_info);
+    _init_attack_offsets(game_info);    
 }
 
 // updates ant and hill lists
@@ -229,8 +318,11 @@ void _init_map(char *data, struct game_info *game_info, struct game_state *game_
             newTile->row = i/game_info->cols;
             newTile->col = i%game_info->cols;
             newTile->lastSeen = 0;
-            newTile->seen = 0;
-            newTile->visible = 0;
+            newTile->my_attack_influence = 0;
+            newTile->enemy_attack_influence = 0;   
+            newTile->seen = false;
+            newTile->visible = false;
+            newTile->combat = SAFE;
             clearDiffusion(newTile);
             game_info->map[i] = *newTile;
         }       
@@ -348,4 +440,63 @@ void updateVision(struct game_info *Info, struct game_state *Game) {
             Info->map[row*Info->cols + col].visible = 1;
         }
     }
+}
+
+void updateCombat(struct game_info *Info, struct game_state *Game) {
+
+    int i, j, k;
+    // set all tiles as safe
+    for (i = 0; i < Info->rows*Info->cols; ++i)
+        Info->map[i].combat = SAFE;
+
+    // if there are no visible enemy ants, all tiles are safe
+    if (!Game->enemy_count)
+        return;
+
+    // clear the attack influence counts
+    int num_attack_tiles = 0;    
+    for (i = 0; i < Info->rows*Info->cols; ++i) {
+        Info->map[i].my_attack_influence = 0;
+        Info->map[i].enemy_attack_influence = 0;        
+    }
+    
+    // count how many times my ants could affect each tile after moving one tile
+    for (i = 0; i < Game->my_count; ++i) {
+        struct tile my_ant = Info->map[Game->my_ants[i]];
+        for (j = 0; j < 4; ++j) {
+            struct tile *neighbor = tileInDirection(directions[j], &my_ant, Info, Game);
+            if (neighbor->state != WATER) {
+                for (k = 0; k < Info->attack_offset_length; ++k) {
+                    int row = (Info->attack_offsets_sq[k][0] + neighbor->row) % Info->rows;
+                    int col = (Info->attack_offsets_sq[k][1] + neighbor->col) % Info->cols;
+                    if (row < 0) row = Info->rows + row;
+                    if (col < 0) col = Info->cols + col;
+                    struct tile *tile = &Info->map[row*Info->cols + col];
+                    if (tile->my_attack_influence == 0)
+                        ++num_attack_tiles;
+                    ++tile->my_attack_influence;
+                }
+            }
+        }
+    }
+    // count how many times all enemy ants could affect each tile after moving one tile
+    for (i = 0; i < Game->enemy_count; ++i) {
+        struct tile enemy_ant = Info->map[Game->enemy_ants[i]];
+        for (j = 0; j < 4; ++j) {
+            struct tile *neighbor = tileInDirection(directions[j], &enemy_ant, Info, Game);
+            if (neighbor->state != WATER) {
+                for (k = 0; k < Info->attack_offset_length; ++k) {
+                    int row = (Info->attack_offsets_sq[k][0] + neighbor->row) % Info->rows;
+                    int col = (Info->attack_offsets_sq[k][1] + neighbor->col) % Info->cols;
+                    if (row < 0) row = Info->rows + row;
+                    if (col < 0) col = Info->cols + col;
+                    struct tile *tile = &Info->map[row*Info->cols + col];
+                    if (tile->enemy_attack_influence == 0)
+                        ++num_attack_tiles;
+                    ++tile->enemy_attack_influence;
+                }
+            }
+        }
+    }
+    
 }

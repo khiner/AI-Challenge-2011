@@ -1,51 +1,5 @@
 #include "ants.h"
 
-struct tile *tileInDirection(char direction, struct tile *tile,
-                      struct game_info *Info, struct game_state *Game) {
-    
-    // defining things just so we can do less writing
-    // UP and DOWN move up and down rows while LEFT and RIGHT
-    // move side to side. The map is just one big array.
-
-    #define UP -Info->cols
-    #define DOWN Info->cols
-    #define LEFT -1
-    #define RIGHT 1
-    
-    // the location within the map array where our ant is currently
-
-    int offset = tile->row*Info->cols + tile->col;
-
-    switch(direction) {
-    case 'W':
-        if (tile->col != 0)
-            return &Info->map[offset + LEFT];
-        else
-            return &Info->map[offset + Info->cols - 1];
-        break;
-    case 'E':
-        if (tile->col != Info->cols - 1)
-            return &Info->map[offset + RIGHT];
-        else
-            return &Info->map[offset - Info->cols + 1];
-        break;
-    case 'N':
-        if (tile->row != 0)
-            return &Info->map[offset + UP];
-        else
-            return &Info->map[offset + (Info->rows - 1)*Info->cols];
-        break;
-    case 'S':
-        if (tile->row != Info->rows - 1)
-            return &Info->map[offset + DOWN];
-        else
-            return &Info->map[offset - (Info->rows - 1)*Info->cols];
-        break;
-    default:
-        return '\0';
-    }
-}
-
 void diffuse(struct tile *tile, struct game_info *Info, struct game_state *Game) {
     int goalsToDiffuse[] = {0, 0, 0};
     
@@ -74,14 +28,14 @@ void diffuse(struct tile *tile, struct game_info *Info, struct game_state *Game)
     else
         tile->agents[EXPLORE_GOAL] = 1.0;
 
-    int goal;
+    int goal, d;
     for (goal = 0; goal < NUM_AGENTS; ++goal) {
         if (goalsToDiffuse[goal]) {
-            float up = tileInDirection('N', tile, Info, Game)->agents[goal];
-            float down = tileInDirection('S', tile, Info, Game)->agents[goal];
-            float left = tileInDirection('W', tile, Info, Game)->agents[goal];
-            float right = tileInDirection('E', tile, Info, Game)->agents[goal];
-            tile->agents[goal] = 0.20*(up +down + left + right);
+            float neighbor_total = 0.0;
+            for (d = 0; d < 4; ++d)
+                neighbor_total += tileInDirection(directions[d], tile, Info, Game)->agents[goal];
+            
+            tile->agents[goal] = 0.20*neighbor_total;
         }
     }
 }

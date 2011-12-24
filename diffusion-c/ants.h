@@ -1,12 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <math.h>
 
-extern const int NUM_AGENTS;
-extern const int NUM_DIFFUSIONS;
-extern const int MAX;
+extern const char directions[4];
+// these externs are instantiated in ants.c
 
+extern const int NUM_AGENTS;  // number of goals to diffuse
+extern const int NUM_DIFFUSIONS;  // how many diffusion loops to do
+
+// tile state constants
 extern const char FOOD;
 extern const char WATER;
 extern const char LAND;
@@ -17,9 +21,16 @@ extern const char MY_ANT;
 extern const char ENEMY_ANT;
 extern const char MY_ANT_AND_HILL;
 extern const char ENEMY_ANT_AND_HILL;
+
+// diffusion goal constants
 extern const int FOOD_GOAL;
 extern const int HILL_GOAL;
 extern const int EXPLORE_GOAL;
+
+// combat constants
+extern const int SAFE;
+extern const int KILL;
+extern const int DIE;
 
 // this header is basically self-documenting
 
@@ -35,18 +46,10 @@ struct game_info {
 	int spawnradius_sq;
     int seed;
     int vision_offset_length;
+    int attack_offset_length;
     int **vision_offsets_sq;
+    int **attack_offsets_sq;    
 	struct tile* map;
-};
-
-struct tile {
-    char state;    
-    int row;
-    int col;
-    int lastSeen;
-    short seen;
-    short visible;
-    float agents[3];    
 };
 
 struct game_state {
@@ -64,3 +67,18 @@ struct game_state {
     int enemy_hill_count;
     int my_ant_index;
 };
+
+struct tile {
+    char state;    
+    int row;
+    int col;
+    int lastSeen;
+    int my_attack_influence;
+    int enemy_attack_influence;    
+    bool seen;
+    bool visible;
+    short combat;
+    float agents[3];
+};
+
+struct tile *tileInDirection(char direction, struct tile *tile, struct game_info *Info, struct game_state *Game);
