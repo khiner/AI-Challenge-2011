@@ -47,16 +47,20 @@ void diffuseAll(struct game_info *Info, struct game_state *Game) {
             diffuse(&Info->map[i*Info->cols + j], Info, Game);
 }
 
+bool isLegal(struct tile *tile) {
+    return (tile->state != WATER && tile->state != MY_ANT &&
+            tile->state != MY_HILL && tile->state != MY_ANT_AND_HILL &&
+            tile->combat == SAFE);
+}
+
 // sanity check the move of ant in direction,
 // send the move to the tournament engine, and
 // update ant location to avoid collisions
 int do_move_direction(struct tile *ant, char dir,
                        struct game_info *Info, struct game_state *Game) {
     struct tile *newTile = tileInDirection(dir, ant, Info, Game);
-    if (newTile->state != WATER && newTile->state != MY_ANT &&
-        newTile->state != MY_HILL && newTile->state != MY_ANT_AND_HILL &&
-        (ant->state == MY_ANT || ant->state == MY_ANT_AND_HILL) &&
-        newTile->combat == SAFE) {
+    if (isLegal(newTile) &&
+        (ant->state == MY_ANT || ant->state == MY_ANT_AND_HILL)) {
         fprintf(stdout, "O %i %i %c\n", ant->row, ant->col, dir);
         // take care of
         ant->state = LAND;
@@ -69,23 +73,18 @@ int do_move_direction(struct tile *ant, char dir,
 void outputMove(struct tile *tile, int goal, struct game_info *Info, struct game_state *Game) {
     float highestVal = 0.0;
     char bestDirection = 0;
-    char nextBestDirection = 0;
-    char directions[4] = {'S', 'E', 'W', 'N'};
-    int i;
+    int i, j;
     for (i = 0; i < 4; ++i) {
         char direction = directions[i];
         struct tile *otherTile = tileInDirection(direction, tile, Info, Game);
         float val = otherTile->agents[goal];
-        if (val > highestVal) {
+        if (val > highestVal && isLegal(otherTile)) {
             highestVal = val;
-            nextBestDirection = bestDirection;
             bestDirection = direction;
         }
     }
-    // if we're blocked at the best direction, do the next best thing
-    if (!(bestDirection && do_move_direction(tile, bestDirection, Info, Game)))
-        if (nextBestDirection)
-            do_move_direction(tile, nextBestDirection, Info, Game);
+    if (bestDirection)
+        do_move_direction(tile, bestDirection, Info, Game);
 }
 
 void do_turn(struct game_state *Game, struct game_info *Info) {

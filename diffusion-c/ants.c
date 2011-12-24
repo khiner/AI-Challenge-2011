@@ -525,6 +525,5 @@ void updateCombat(struct game_info *Info, struct game_state *Game) {
                     neighbor->combat = DIE;
             }
         }
-    }
-    
+    }    
 }
