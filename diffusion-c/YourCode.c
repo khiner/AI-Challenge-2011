@@ -1,7 +1,7 @@
 #include "ants.h"
 
 void diffuse(struct tile *tile, struct game_info *Info, struct game_state *Game) {
-    int goalsToDiffuse[] = {0, 0, 0};
+    int goalsToDiffuse[] = {false, false, false, false};
     
     if (tile->state == WATER) {
         clearDiffusion(tile);
@@ -10,12 +10,12 @@ void diffuse(struct tile *tile, struct game_info *Info, struct game_state *Game)
     if (tile->state == FOOD)
         tile->agents[FOOD_GOAL] = 1.0;
     else
-        goalsToDiffuse[FOOD_GOAL] = 1;
+        goalsToDiffuse[FOOD_GOAL] = true;
             
     if (tile->state == ENEMY_HILL || tile->state == ENEMY_ANT_AND_HILL)
         tile->agents[HILL_GOAL] = 1.0;
     else
-        goalsToDiffuse[HILL_GOAL] = 1;
+        goalsToDiffuse[HILL_GOAL] = true;
 
     if (tile->visible) {
         tile->lastSeen = Info->curr_turn;
@@ -24,10 +24,15 @@ void diffuse(struct tile *tile, struct game_info *Info, struct game_state *Game)
     }
 
     if (tile->seen)
-        goalsToDiffuse[EXPLORE_GOAL] = 1;
+        goalsToDiffuse[EXPLORE_GOAL] = true;
     else
         tile->agents[EXPLORE_GOAL] = 1.0;
 
+    if (tile->state == ENEMY_ANT)
+        tile->agents[ENEMY_ANT_GOAL] = 1.0;
+    else
+        goalsToDiffuse[ENEMY_ANT_GOAL] = true;
+    
     int goal, d;
     for (goal = 0; goal < NUM_AGENTS; ++goal) {
         if (goalsToDiffuse[goal]) {
@@ -70,41 +75,31 @@ int do_move_direction(struct tile *ant, char dir,
         return 0;
 }
 
-void outputMove(struct tile *tile, int goal, struct game_info *Info, struct game_state *Game) {
-    float highestVal = 0.0;
-    char bestDirection = 0;
-    int i, j;
-    for (i = 0; i < 4; ++i) {
-        char direction = directions[i];
-        struct tile *otherTile = tileInDirection(direction, tile, Info, Game);
-        float val = otherTile->agents[goal];
-        if (val > highestVal && isLegal(otherTile)) {
-            highestVal = val;
-            bestDirection = direction;
-        }
-    }
-    if (bestDirection)
-        do_move_direction(tile, bestDirection, Info, Game);
-}
-
 void do_turn(struct game_state *Game, struct game_info *Info) {
     // move
-    int i;    
+    int i, j;    
     for (i = 0; i < Game->my_count; ++i) {
-        struct tile *ant = &Info->map[Game->my_ants[i]];
-        float hill = ant->agents[HILL_GOAL];
-        float food = ant->agents[FOOD_GOAL];
-        float explore = ant->agents[EXPLORE_GOAL];
-
-        int goal;
-        if (hill != 0)
-            goal = HILL_GOAL;
-        else if (food != 0)
-            goal = FOOD_GOAL;
-        else
-            goal = EXPLORE_GOAL;
+        struct tile *ant = &Info->map[Game->my_ants[i]];        
+        float highestVal = 0.0;
+        char bestDirection = 0;
+        
+        for (j = 0; j < 5; ++j) {            
+            char direction = directions[j];
+            struct tile *tile = tileInDirection(direction, ant, Info, Game);
+            float hill = tile->agents[HILL_GOAL];
+            float food = tile->agents[FOOD_GOAL];
+            float explore = tile->agents[EXPLORE_GOAL];
+            float enemy = tile->agents[ENEMY_ANT_GOAL];
             
-        outputMove(ant, goal, Info, Game);
+            float val = food + hill + explore + enemy;
+            if (val > highestVal && isLegal(tile)) {
+                highestVal = val;
+                bestDirection = direction;
+            }
+        }
+
+        if (bestDirection)
+            do_move_direction(ant, bestDirection, Info, Game);
     }
 }
 

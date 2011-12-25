@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <math.h>
 
-extern const char directions[4];
+extern const char directions[5];
 // these externs are instantiated in ants.c
 
 extern const int NUM_AGENTS;  // number of goals to diffuse
@@ -26,6 +26,7 @@ extern const char ENEMY_ANT_AND_HILL;
 extern const int FOOD_GOAL;
 extern const int HILL_GOAL;
 extern const int EXPLORE_GOAL;
+extern const int ENEMY_ANT_GOAL;
 
 // combat constants
 extern const int SAFE;
@@ -78,7 +79,7 @@ struct tile {
     bool seen;
     bool visible;
     short combat;
-    float agents[3];
+    float agents[4];
 };
 
 struct tile *tileInDirection(char direction, struct tile *tile, struct game_info *Info, struct game_state *Game);

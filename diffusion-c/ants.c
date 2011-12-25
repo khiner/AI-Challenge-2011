@@ -1,9 +1,9 @@
 #include "ants.h"
 
-const char directions[4] = {'N', 'E', 'S', 'W'};
+const char directions[5] = {'N', 'E', 'S', 'W', 0};
 
-const int NUM_AGENTS = 3;
-const int NUM_DIFFUSIONS = 100;
+const int NUM_AGENTS = 4;
+const int NUM_DIFFUSIONS = 200;
 
 const char FOOD = '*';
 const char WATER = '%';
@@ -19,6 +19,7 @@ const char ENEMY_ANT_AND_HILL = 'B';
 const int FOOD_GOAL = 0;
 const int HILL_GOAL = 1;
 const int EXPLORE_GOAL = 2;
+const int ENEMY_ANT_GOAL = 3;
 
 const int SAFE = 0;
 const int KILL = 1;
@@ -66,7 +67,7 @@ struct tile *tileInDirection(char direction, struct tile *tile,
             return &Info->map[offset - (Info->rows - 1)*Info->cols];
         break;
     default:
-        return '\0';
+        return tile; // for invalid directions, return the same tile
     }
 }
 
@@ -463,7 +464,7 @@ void updateCombat(struct game_info *Info, struct game_state *Game) {
     // count how many times my ants could affect each tile after moving one tile
     for (i = 0; i < Game->my_count; ++i) {
         struct tile my_ant = Info->map[Game->my_ants[i]];
-        for (j = 0; j < 4; ++j) {
+        for (j = 0; j < 5; ++j) {
             struct tile *neighbor = tileInDirection(directions[j], &my_ant, Info, Game);
             if (neighbor->state != WATER) {
                 for (k = 0; k < Info->attack_offset_length; ++k) {
@@ -482,7 +483,7 @@ void updateCombat(struct game_info *Info, struct game_state *Game) {
     // count how many times all enemy ants could affect each tile after moving one tile
     for (i = 0; i < Game->enemy_count; ++i) {
         struct tile enemy_ant = Info->map[Game->enemy_ants[i]];
-        for (j = 0; j < 4; ++j) {
+        for (j = 0; j < 5; ++j) {
             struct tile *neighbor = tileInDirection(directions[j], &enemy_ant, Info, Game);
             if (neighbor->state != WATER) {
                 for (k = 0; k < Info->attack_offset_length; ++k) {
@@ -504,10 +505,10 @@ void updateCombat(struct game_info *Info, struct game_state *Game) {
     // to the best enemy's weakness (the number of ants it will be fighting)
     for (i = 0; i < Game->my_count; ++i) {
         struct tile my_ant = Info->map[Game->my_ants[i]];
-        for (j = 0; j < 4; ++j) {
+        for (j = 0; j < 5; ++j) {
             struct tile *neighbor = tileInDirection(directions[j], &my_ant, Info, Game);
             if (neighbor->state != WATER) {
-                int fighting = 100;                
+                int fighting = 100;
                 for (k = 0; k < Info->attack_offset_length; ++k) {
                     int row = (Info->attack_offsets_sq[k][0] + neighbor->row) % Info->rows;
                     int col = (Info->attack_offsets_sq[k][1] + neighbor->col) % Info->cols;
